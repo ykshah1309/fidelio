@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "purpose": "Fallback gold-standard report for the paystub flow. Numbers are constructed from a plausible synthetic biweekly ADP paystub (Maya, 29, $72k annual salary, filing single, standard pre-tax deductions).",
+    "source": "synthetic — not from a real paystub",
+    "constructed_on": "2026-04-20"
+  },
+  "extraction_input": {
+    "document_type": "paystub",
+    "period": { "start": "2026-04-06", "end": "2026-04-19" },
+    "provider": "ADP",
+    "account_type": null,
+    "total_balance": null,
+    "ytd_contributions": null,
+    "holdings": [],
+    "paystub": {
+      "gross_pay": 2769.23,
+      "net_pay": 2055.12,
+      "pay_frequency": "biweekly",
+      "deductions": [
+        { "name": "Federal Income Tax", "amount": 261.45, "type": "federal_tax" },
+        { "name": "NJ State Income Tax", "amount": 72.34, "type": "state_tax" },
+        { "name": "Social Security", "amount": 171.69, "type": "fica" },
+        { "name": "Medicare", "amount": 40.15, "type": "medicare" },
+        { "name": "401(k) Pre-Tax", "amount": 83.08, "type": "retirement" },
+        { "name": "Health Insurance (HDHP)", "amount": 65.4, "type": "health_insurance" },
+        { "name": "Dental", "amount": 12.0, "type": "dental" },
+        { "name": "Vision", "amount": 8.0, "type": "vision" }
+      ],
+      "retirement_contribution": { "amount_per_period": 83.08, "pct_of_gross": 3.0 },
+      "employer_match": {
+        "amount_per_period": 41.54,
+        "match_rate_pct": 50.0,
+        "cap_pct": 6.0
+      },
+      "ytd_gross": 22153.84,
+      "ytd_net": 16440.96
+    },
+    "raw_notes": []
+  },
+  "report": {
+    "headline": {
+      "one_line": "You're leaving about $2,160 of free employer money on the table every year.",
+      "dollar_amount": 2160,
+      "severity": "critical"
+    },
+    "holdings_review": [],
+    "fee_impact": null,
+    "match_analysis": {
+      "current_contribution_pct": 3.0,
+      "employer_match_rate_pct": 50.0,
+      "employer_match_cap_pct": 6.0,
+      "money_left_on_table_annual_usd": 2160.0,
+      "plain_english": "Your employer matches 50 cents for every dollar you put into your 401(k), up to 6% of your salary. You're contributing 3%, which captures only half of that match. If you raise your contribution to 6%, your employer contributes an extra $2,160 per year — money that's already in your compensation package, just waiting to be claimed."
+    },
+    "paystub_notes": {
+      "withholding_check": "Your federal withholding of $261.45 on gross pay of $2,769.23 is about 9.4% — in the normal range for someone making $72k and filing single. No red flags.",
+      "retirement_note": "Your 3% pre-tax 401(k) contribution saves you roughly $18 per paycheck in federal income tax today, on top of building retirement wealth. Raising the contribution to 6% would double that tax saving.",
+      "flags": []
+    },
+    "action_items": [
+      {
+        "title": "Raise your 401(k) contribution from 3% to 6%.",
+        "detail": "Your employer is matching 50% of every dollar you contribute up to 6% of salary. You're only contributing 3%, so you're capturing half the match. Log in to your plan's portal (likely Fidelity NetBenefits, Empower, or Principal — the paystub lists your plan administrator), go to 'Change Contribution', and move from 3% to 6%. Your take-home pay drops by about $63 per biweekly check — but your employer adds $1,080 per year on top of your $1,080 increase. You get a $2,160/year raise from a 2-minute change.",
+        "effort": "5_minutes",
+        "impact_usd_annual": 2160
+      },
+      {
+        "title": "Save your dental + vision decision for open enrollment.",
+        "detail": "You're paying $20 biweekly ($520/year) for dental + vision. That's worth it if you use them — for most people an annual cleaning + one eye exam pays for the dental and roughly matches the vision. If you're not using them, drop them at next open enrollment. Not a crisis, but a free check to run.",
+        "effort": "30_minutes",
+        "impact_usd_annual": 520
+      },
+      {
+        "title": "Check whether you're eligible for an HSA.",
+        "detail": "You're on a High-Deductible Health Plan (HDHP), which typically qualifies you for a Health Savings Account. An HSA is a triple-tax-advantaged account — contributions reduce your taxable income, growth is tax-free, and qualified withdrawals are tax-free. If your employer offers one, contributing even $100 per paycheck can meaningfully reduce your tax bill while building a medical safety net.",
+        "effort": "this_week",
+        "impact_usd_annual": null
+      }
+    ],
+    "disclaimer": "Fidelio is an educational tool, not financial advice. Numbers are based only on the document you uploaded and may not reflect your full financial picture. For decisions with significant impact, consult a fiduciary financial planner."
+  }
+}

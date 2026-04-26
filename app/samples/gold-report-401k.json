@@ -1,0 +1,105 @@
+{
+  "_meta": {
+    "purpose": "Fallback gold-standard report for the 401(k) flow. If live extraction fails on stage, load this JSON into the Results page so the demo doesn't die. Numbers are constructed from a plausible synthetic statement (Maya, 29, $72k salary, $42,000 401(k) balance, 3% contribution, 6%-cap employer match).",
+    "source": "synthetic — not from a real statement",
+    "constructed_on": "2026-04-20"
+  },
+  "extraction_input": {
+    "document_type": "401k_statement",
+    "period": { "start": "2025-10-01", "end": "2025-12-31" },
+    "provider": "Fidelity",
+    "account_type": "Traditional 401(k)",
+    "total_balance": 42000.0,
+    "ytd_contributions": { "employee": 2160.0, "employer": 1080.0 },
+    "holdings": [
+      {
+        "name": "Fidelity Freedom 2060 Fund (Active)",
+        "ticker": "FDKLX",
+        "balance_usd": 33600.0,
+        "shares": null,
+        "allocation_pct": 80.0,
+        "expense_ratio_pct": 0.75,
+        "category": "target_date"
+      },
+      {
+        "name": "Fidelity 500 Index Fund",
+        "ticker": "FXAIX",
+        "balance_usd": 8400.0,
+        "shares": null,
+        "allocation_pct": 20.0,
+        "expense_ratio_pct": 0.015,
+        "category": "equity_index"
+      }
+    ],
+    "paystub": null,
+    "raw_notes": [
+      "Employer plan document lists a Target-Date Index series (FIPFX) as an alternative. Not currently held."
+    ]
+  },
+  "report": {
+    "headline": {
+      "one_line": "You're paying about $252 a year in fund fees — roughly $33,000 over 30 years of compounding.",
+      "dollar_amount": 33000,
+      "severity": "warning"
+    },
+    "holdings_review": [
+      {
+        "name": "Fidelity Freedom 2060 Fund (Active)",
+        "ticker": "FDKLX",
+        "balance_usd": 33600.0,
+        "allocation_pct": 80.0,
+        "expense_ratio_pct": 0.75,
+        "plain_english": "A professionally managed retirement fund targeting 2060. Fidelity's actively managed version — meaning humans pick the underlying investments and charge a fee for doing so.",
+        "verdict": "expensive",
+        "verdict_reason": "At 0.75%, this costs roughly 50 times more per year than the index-based alternative your plan offers (FIPFX at 0.12%). On your current balance, that gap is about $212 per year — most of your total fee bill."
+      },
+      {
+        "name": "Fidelity 500 Index Fund",
+        "ticker": "FXAIX",
+        "balance_usd": 8400.0,
+        "allocation_pct": 20.0,
+        "expense_ratio_pct": 0.015,
+        "plain_english": "A fund that automatically owns shares of the 500 largest US companies (the S&P 500). One of the cheapest mainstream funds in existence.",
+        "verdict": "good",
+        "verdict_reason": "At 0.015%, this is essentially free. Nothing to change here."
+      }
+    ],
+    "fee_impact": {
+      "annual_fees_usd": 253,
+      "ten_year_cost_usd": 4100,
+      "twenty_year_cost_usd": 13700,
+      "thirty_year_cost_usd": 33000,
+      "assumptions": "Assumes a 7% nominal annual return, your current $42,000 balance, and your current $2,160/year contribution pace. Inflation not subtracted — these are nominal dollars.",
+      "explanation": "Fees compound just like returns do: every dollar paid in fees is also a dollar that isn't earning future returns. On your current mix, roughly $33,000 of what would otherwise be your retirement money will go to fund managers over 30 years — most of it from the Freedom 2060 Active fund."
+    },
+    "match_analysis": {
+      "current_contribution_pct": 3.0,
+      "employer_match_rate_pct": 50.0,
+      "employer_match_cap_pct": 6.0,
+      "money_left_on_table_annual_usd": 1080.0,
+      "plain_english": "Your employer matches 50 cents on the dollar up to 6% of your salary. You're contributing 3%, which captures half the available match. Raising your contribution to 6% would unlock an additional $1,080 per year of employer money you're not currently getting."
+    },
+    "paystub_notes": null,
+    "action_items": [
+      {
+        "title": "Capture the full employer match.",
+        "detail": "Log in to Fidelity NetBenefits, find 'Contribution Amount' in the plan menu, and raise your contribution from 3% to 6%. This takes about two minutes and unlocks roughly $1,080 per year of employer money — effectively a 1.5% raise you already qualify for.",
+        "effort": "5_minutes",
+        "impact_usd_annual": 1080
+      },
+      {
+        "title": "Switch from the Active 2060 fund to the Index 2060 fund.",
+        "detail": "Your plan offers FIPFX (Fidelity Freedom Index 2060) at roughly 0.12% — the same retirement strategy as your current FDKLX at 0.75%, for 1/6 the cost. Inside NetBenefits, go to 'Change Investments', select FDKLX, and swap the balance and future contributions to FIPFX.",
+        "effort": "30_minutes",
+        "impact_usd_annual": 212
+      },
+      {
+        "title": "Sanity-check your target-date mix.",
+        "detail": "You're holding a 2060 target-date fund plus a standalone S&P 500 index fund. The target-date fund already contains US stocks, so this partially duplicates your US exposure. Pick one: either 100% in the target-date fund (simpler) or a DIY mix with explicit international + bond allocations (more control). Both are valid — the hybrid isn't.",
+        "effort": "this_week",
+        "impact_usd_annual": null
+      }
+    ],
+    "disclaimer": "Fidelio is an educational tool, not financial advice. Numbers are based only on the document you uploaded and may not reflect your full financial picture. For decisions with significant impact, consult a fiduciary financial planner."
+  }
+}
