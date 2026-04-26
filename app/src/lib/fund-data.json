@@ -1,0 +1,195 @@
+{
+  "as_of": "2024-12",
+  "disclaimer": "Expense ratios sourced from issuer prospectus summaries and published fund pages as of late 2024. Always verify against the most recent fund prospectus before relying on a figure. If a fund on the user's statement is not in this lookup, Fidelio must report 'expense ratio not available from this source' rather than estimate.",
+  "funds": {
+    "VTSAX": {
+      "name": "Vanguard Total Stock Market Index Admiral",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.04,
+      "category": "equity_index",
+      "plain_english": "A low-cost fund that owns a tiny slice of roughly 4,000 publicly traded US companies — small, medium, and large."
+    },
+    "VFIAX": {
+      "name": "Vanguard 500 Index Admiral",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.04,
+      "category": "equity_index",
+      "plain_english": "Tracks the S&P 500 — the 500 largest US companies. One of the cheapest mainstream index funds in existence."
+    },
+    "VTIAX": {
+      "name": "Vanguard Total International Stock Index Admiral",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.11,
+      "category": "equity_index",
+      "plain_english": "Owns a slice of thousands of non-US companies — Europe, Japan, emerging markets. The international counterpart to VTSAX."
+    },
+    "VBTLX": {
+      "name": "Vanguard Total Bond Market Index Admiral",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.05,
+      "category": "bond_index",
+      "plain_english": "Owns thousands of US bonds — Treasuries, investment-grade corporates, and mortgage bonds. The standard low-cost bond anchor."
+    },
+    "VTTSX": {
+      "name": "Vanguard Target Retirement 2060 Fund",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.08,
+      "category": "target_date_index",
+      "plain_english": "A pre-mixed retirement fund for someone retiring around 2060. Under the hood it's stocks + bonds that gradually shift toward bonds as 2060 approaches."
+    },
+    "VFFVX": {
+      "name": "Vanguard Target Retirement 2055 Fund",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.08,
+      "category": "target_date_index",
+      "plain_english": "Pre-mixed retirement fund aimed at retiring around 2055 — mostly global stocks now, gradually shifting toward bonds."
+    },
+    "VFIFX": {
+      "name": "Vanguard Target Retirement 2050 Fund",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.08,
+      "category": "target_date_index",
+      "plain_english": "Pre-mixed retirement fund aimed at retiring around 2050."
+    },
+    "VFORX": {
+      "name": "Vanguard Target Retirement 2040 Fund",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.08,
+      "category": "target_date_index",
+      "plain_english": "Pre-mixed retirement fund aimed at retiring around 2040 — more bonds than the later-dated funds."
+    },
+    "VTHRX": {
+      "name": "Vanguard Target Retirement 2030 Fund",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.08,
+      "category": "target_date_index",
+      "plain_english": "Pre-mixed retirement fund aimed at retiring around 2030 — roughly 70% stocks, 30% bonds."
+    },
+    "FXAIX": {
+      "name": "Fidelity 500 Index Fund",
+      "issuer": "Fidelity",
+      "expense_ratio_pct": 0.015,
+      "category": "equity_index",
+      "plain_english": "Fidelity's S&P 500 index fund — as close to free as a mutual fund gets. Tracks the 500 largest US companies."
+    },
+    "FSKAX": {
+      "name": "Fidelity Total Market Index Fund",
+      "issuer": "Fidelity",
+      "expense_ratio_pct": 0.015,
+      "category": "equity_index",
+      "plain_english": "Owns essentially every US stock — mirrors VTSAX at a slightly lower price."
+    },
+    "FTIHX": {
+      "name": "Fidelity Total International Index Fund",
+      "issuer": "Fidelity",
+      "expense_ratio_pct": 0.06,
+      "category": "equity_index",
+      "plain_english": "International-stock counterpart to FSKAX — thousands of companies outside the US."
+    },
+    "FXNAX": {
+      "name": "Fidelity US Bond Index Fund",
+      "issuer": "Fidelity",
+      "expense_ratio_pct": 0.025,
+      "category": "bond_index",
+      "plain_english": "Low-cost broad US bond index — Treasuries and investment-grade corporates."
+    },
+    "FIPFX": {
+      "name": "Fidelity Freedom Index 2055 Fund",
+      "issuer": "Fidelity",
+      "expense_ratio_pct": 0.12,
+      "category": "target_date_index",
+      "plain_english": "Fidelity's index-based target-date fund for 2055 retirement — cheap for an all-in-one retirement fund."
+    },
+    "FFLEX": {
+      "name": "Fidelity Freedom 2055 Fund (Active)",
+      "issuer": "Fidelity",
+      "expense_ratio_pct": 0.75,
+      "category": "target_date_active",
+      "plain_english": "Fidelity's actively managed 2055 fund. Roughly 6x more expensive than the Index version for similar returns — check your statement carefully: the plan often offers both and the 'Index' version is almost always the better pick."
+    },
+    "SPY": {
+      "name": "SPDR S&P 500 ETF Trust",
+      "issuer": "State Street",
+      "expense_ratio_pct": 0.0945,
+      "category": "equity_index",
+      "plain_english": "The original S&P 500 ETF. Cheap, but Vanguard's VOO is cheaper for the same thing."
+    },
+    "VOO": {
+      "name": "Vanguard S&P 500 ETF",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.03,
+      "category": "equity_index",
+      "plain_english": "Vanguard's S&P 500 ETF — tracks the 500 largest US companies at nearly zero cost."
+    },
+    "VTI": {
+      "name": "Vanguard Total Stock Market ETF",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.03,
+      "category": "equity_index",
+      "plain_english": "ETF version of VTSAX — owns essentially every public US company for a rounding-error expense ratio."
+    },
+    "BND": {
+      "name": "Vanguard Total Bond Market ETF",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.03,
+      "category": "bond_index",
+      "plain_english": "ETF version of VBTLX — broad US bond exposure at near-zero cost."
+    },
+    "AGG": {
+      "name": "iShares Core US Aggregate Bond ETF",
+      "issuer": "iShares / BlackRock",
+      "expense_ratio_pct": 0.03,
+      "category": "bond_index",
+      "plain_english": "Broad US bond ETF — competitor to BND, same job, same price."
+    },
+    "QQQ": {
+      "name": "Invesco QQQ Trust",
+      "issuer": "Invesco",
+      "expense_ratio_pct": 0.2,
+      "category": "active_equity",
+      "plain_english": "Tracks the Nasdaq-100 — 100 largest non-financial Nasdaq companies, tech-heavy. More expensive than broad index funds because it's narrower."
+    },
+    "AAVTX": {
+      "name": "American Funds 2065 Target Date Retirement R-6",
+      "issuer": "Capital Group / American Funds",
+      "expense_ratio_pct": 0.39,
+      "category": "target_date_active",
+      "plain_english": "Actively managed target-date fund for 2065 retirement. Roughly 5x the cost of Vanguard's equivalent (VLXVX) for comparable long-run returns."
+    },
+    "AFTLX": {
+      "name": "American Funds 2060 Target Date Retirement R-6",
+      "issuer": "Capital Group / American Funds",
+      "expense_ratio_pct": 0.38,
+      "category": "target_date_active",
+      "plain_english": "Actively managed target-date fund for 2060 retirement — much more expensive than an index TDF for similar exposure."
+    },
+    "TRRLX": {
+      "name": "T. Rowe Price Retirement 2060 Fund",
+      "issuer": "T. Rowe Price",
+      "expense_ratio_pct": 0.61,
+      "category": "target_date_active",
+      "plain_english": "Actively managed target-date fund for 2060. Roughly 7–8x the cost of an index-based TDF — hard to justify for a typical retirement saver."
+    },
+    "JFBRX": {
+      "name": "JPMorgan SmartRetirement 2060 Fund R6",
+      "issuer": "JPMorgan",
+      "expense_ratio_pct": 0.36,
+      "category": "target_date_active",
+      "plain_english": "JPMorgan's actively managed 2060 target-date fund — mid-cost among active TDFs, still several times pricier than an index TDF."
+    },
+    "VMFXX": {
+      "name": "Vanguard Federal Money Market Fund",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.11,
+      "category": "money_market",
+      "plain_english": "A money-market fund — very low risk, tracks short-term government rates. Fine as a cash sleeve; not a long-term investment."
+    },
+    "VLXVX": {
+      "name": "Vanguard Target Retirement 2065 Fund",
+      "issuer": "Vanguard",
+      "expense_ratio_pct": 0.08,
+      "category": "target_date_index",
+      "plain_english": "Pre-mixed retirement fund aimed at retiring around 2065 — the latest-dated Vanguard TDF currently offered."
+    }
+  }
+}
