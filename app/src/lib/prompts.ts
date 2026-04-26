@@ -176,12 +176,115 @@ What you can try:
 
 No information was saved.`;
 
-export const TOOL_USE_GUIDANCE = `Tool-use guidance:
-- For every individual-company stock holding (not a fund — a single ticker like AAPL, MSFT), call get_stock_quote and get_company_overview once each.
-- For every holding whose expense ratio is NOT listed on the statement, call lookup_fund_expense_ratio with the ticker. If the lookup returns null, note in the holdings_review that the ratio is not available — do not estimate.
-- Call get_economic_data once with seriesId="CPIAUCSL" to get the current CPI reading, used in the assumptions line of fee projections.
-- Do not call any tool more than once for the same input. Cache mentally.
-- Do not call tools for funds — they have expense ratios, not quotes. Only call tools for individual-stock holdings.`;
+export const TOOL_USE_GUIDANCE = `Tool-use guidance — speed matters. Bundle ALL the tool calls you need into a single response (multiple tool_use blocks in the same turn) so they run in parallel.
+
+- For every holding whose expense ratio is NOT listed on the statement AND has a ticker, call lookup_fund_expense_ratio with that ticker. If the lookup returns null, note in the holdings_review that the ratio is not available — do not estimate.
+- For every individual-company stock holding (not a fund — a single ticker like AAPL, MSFT, TSLA), call get_stock_quote ONCE. Skip get_company_overview unless absolutely necessary.
+- DO NOT call get_economic_data — current CPI inflation is 3.1% (Mar 2026). Use this constant directly in your assumptions line.
+- Do not call any tool more than once for the same input.
+- Do not call tools for funds — they have expense ratios, not quotes.
+
+When you have everything you need, emit your full response (extraction + report) and stop.`;
+
+export const COMBINED_ANALYSIS_PROMPT = `Read the attached document and produce BOTH an extraction and a report in a SINGLE response. Do not stop after extraction — continue straight into the report.
+
+Step 1 — Extract structured facts from the document. Emit as JSON inside <extraction>...</extraction> tags. Use null for missing fields, never guess.
+
+Extraction schema:
+{
+  "document_type": "401k_statement" | "403b_statement" | "ira_statement" | "brokerage_statement" | "paystub" | "other",
+  "period": { "start": "YYYY-MM-DD" | null, "end": "YYYY-MM-DD" | null },
+  "provider": string | null,
+  "account_type": string | null,
+  "total_balance": number | null,
+  "ytd_contributions": { "employee": number | null, "employer": number | null } | null,
+  "holdings": [
+    {
+      "name": string,
+      "ticker": string | null,
+      "balance_usd": number | null,
+      "shares": number | null,
+      "allocation_pct": number | null,
+      "expense_ratio_pct": number | null,
+      "category": "target_date" | "equity_index" | "bond_index" | "active_equity" | "active_bond" | "money_market" | "company_stock" | "other" | null
+    }
+  ],
+  "paystub": {
+    "gross_pay": number | null,
+    "net_pay": number | null,
+    "pay_frequency": "weekly" | "biweekly" | "semimonthly" | "monthly" | null,
+    "deductions": [
+      { "name": string, "amount": number, "type": "federal_tax" | "state_tax" | "fica" | "medicare" | "retirement" | "health_insurance" | "dental" | "vision" | "hsa" | "fsa" | "other" }
+    ],
+    "retirement_contribution": { "amount_per_period": number, "pct_of_gross": number | null } | null,
+    "employer_match": { "amount_per_period": number | null, "match_rate_pct": number | null, "cap_pct": number | null } | null,
+    "ytd_gross": number | null,
+    "ytd_net": number | null
+  } | null,
+  "raw_notes": [string]
+}
+
+Step 2 — Call any needed tools (lookup_fund_expense_ratio, get_stock_quote) IN PARALLEL — bundle them in one response. After receiving the tool results, proceed to Step 3.
+
+Step 3 — Write the user's report as JSON inside <report>...</report> tags. Schema:
+
+{
+  "headline": {
+    "one_line": string,
+    "dollar_amount": number,
+    "severity": "info" | "warning" | "critical"
+  },
+  "holdings_review": [
+    {
+      "name": string,
+      "ticker": string | null,
+      "balance_usd": number | null,
+      "allocation_pct": number | null,
+      "expense_ratio_pct": number | null,
+      "plain_english": string,
+      "verdict": "good" | "okay" | "expensive" | "unknown",
+      "verdict_reason": string
+    }
+  ],
+  "fee_impact": {
+    "annual_fees_usd": number | null,
+    "ten_year_cost_usd": number | null,
+    "twenty_year_cost_usd": number | null,
+    "thirty_year_cost_usd": number | null,
+    "assumptions": string,
+    "explanation": string
+  } | null,
+  "match_analysis": {
+    "current_contribution_pct": number | null,
+    "employer_match_rate_pct": number | null,
+    "employer_match_cap_pct": number | null,
+    "money_left_on_table_annual_usd": number | null,
+    "plain_english": string
+  } | null,
+  "paystub_notes": {
+    "withholding_check": string,
+    "retirement_note": string | null,
+    "flags": [string]
+  } | null,
+  "action_items": [
+    {
+      "title": string,
+      "detail": string,
+      "effort": "5_minutes" | "30_minutes" | "this_week",
+      "impact_usd_annual": number | null
+    }
+  ],
+  "disclaimer": string
+}
+
+Report rules:
+- Exactly 3 action items. Rank by impact_usd_annual descending, null last.
+- Use 7% nominal annual return and 3.1% inflation in projections. State both in assumptions.
+- If a section lacks data, set it to null rather than hedging.
+- Never reference user/employer/account names. "You" and "your plan" only.
+- Disclaimer must be exactly: "Fidelio is an educational tool, not financial advice. Numbers are based only on the document you uploaded and may not reflect your full financial picture. For decisions with significant impact, consult a fiduciary financial planner."
+
+Format reminder: emit BOTH <extraction>...</extraction> AND <report>...</report> in your final response. Inside each tag, place the raw JSON object directly — DO NOT wrap it in markdown code fences (no \`\`\`json blocks, no leading prose). The content inside <extraction> must start with { and end with } so the parser can JSON.parse it directly. Same for <report>.`;
 
 export const STANDARD_DISCLAIMER =
   "Fidelio is an educational tool, not financial advice. Numbers are based only on the document you uploaded and may not reflect your full financial picture. For decisions with significant impact, consult a fiduciary financial planner.";

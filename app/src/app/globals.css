@@ -1,57 +1,74 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* ── Light: warm parchment ─────────────────────────────────────────────── */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --background: 36 28% 95%;       /* #F4EFE6 — parchment cream */
+    --foreground: 20 14% 8%;        /* #181412 — warm ink */
+    --card: 36 24% 97%;
+    --card-foreground: 20 14% 8%;
+    --popover: 36 24% 97%;
+    --popover-foreground: 20 14% 8%;
+    --primary: 20 14% 8%;
+    --primary-foreground: 36 28% 95%;
+    --secondary: 36 18% 90%;
+    --secondary-foreground: 20 14% 8%;
+    --muted: 36 16% 88%;
+    --muted-foreground: 25 10% 38%;
+    --accent: 36 18% 90%;
+    --accent-foreground: 20 14% 8%;
+    --destructive: 4 68% 48%;
+    --destructive-foreground: 36 28% 95%;
+    --border: 30 12% 80%;
+    --input: 30 12% 84%;
+    --ring: 36 50% 48%;
     --radius: 0.5rem;
 
+    /* ── Brand semantic tokens ─────────────────────────────────────────── */
+    --gold: 36 50% 48%;             /* #C09353 — tobacco gold */
+    --gold-soft: 36 60% 70%;
+    --oxblood: 4 56% 44%;           /* warm oxblood */
+    --forest: 142 22% 38%;          /* deep sage */
+    --ink: 20 14% 8%;
+    --paper: 36 28% 95%;
+
     --font-sans: 'Inter', system-ui, sans-serif;
-    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-serif: 'Fraunces', 'Playfair Display', Georgia, serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
+  /* ── Dark: ink black ──────────────────────────────────────────────────── */
   .dark {
-    --background: 220 20% 4%;
-    --foreground: 210 20% 96%;
-    --card: 220 18% 6%;
-    --card-foreground: 210 20% 96%;
-    --popover: 220 18% 6%;
-    --popover-foreground: 210 20% 96%;
-    --primary: 210 20% 96%;
-    --primary-foreground: 220 20% 4%;
-    --secondary: 220 14% 12%;
-    --secondary-foreground: 210 20% 96%;
-    --muted: 220 14% 12%;
-    --muted-foreground: 215 14% 55%;
-    --accent: 220 14% 12%;
-    --accent-foreground: 210 20% 96%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 14% 14%;
-    --input: 220 14% 14%;
-    --ring: 215 20% 65%;
+    --background: 24 10% 5%;        /* #0E0C0B — ink black, warm not blue */
+    --foreground: 36 24% 92%;       /* #ECE3D2 — warm parchment */
+    --card: 24 10% 7%;
+    --card-foreground: 36 24% 92%;
+    --popover: 24 10% 7%;
+    --popover-foreground: 36 24% 92%;
+    --primary: 36 24% 92%;
+    --primary-foreground: 24 10% 5%;
+    --secondary: 24 8% 12%;
+    --secondary-foreground: 36 24% 92%;
+    --muted: 24 8% 12%;
+    --muted-foreground: 30 10% 60%;
+    --accent: 24 8% 12%;
+    --accent-foreground: 36 24% 92%;
+    --destructive: 4 60% 50%;
+    --destructive-foreground: 36 24% 92%;
+    --border: 24 8% 14%;
+    --input: 24 8% 14%;
+    --ring: 36 56% 60%;
+
+    --gold: 36 56% 60%;             /* #C8A063 — luminous gold for dark */
+    --gold-soft: 36 70% 78%;
+    --oxblood: 4 60% 58%;
+    --forest: 142 30% 56%;
+    --ink: 36 24% 92%;
+    --paper: 24 10% 5%;
   }
 }
 
@@ -59,85 +76,178 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Subtle paper grain — barely perceptible, sells the editorial vibe */
+    background-image:
+      radial-gradient(at 30% 0%, hsl(var(--gold) / 0.04) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, hsl(var(--oxblood) / 0.03) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.025;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   }
 }
 
-/* ── Custom utility classes ─────────────────────────────────────────────── */
+/* ── Brand semantic utility classes ───────────────────────────────────── */
 
 @layer utilities {
   .font-serif {
     font-family: var(--font-serif);
+    font-feature-settings: "ss01" 1, "ss02" 1, "lnum" 1;
   }
   .font-mono {
     font-family: var(--font-mono);
   }
+
+  .text-gold       { color: hsl(var(--gold)); }
+  .text-gold-soft  { color: hsl(var(--gold-soft)); }
+  .text-oxblood    { color: hsl(var(--oxblood)); }
+  .text-forest     { color: hsl(var(--forest)); }
+  .text-ink        { color: hsl(var(--ink)); }
+
+  .bg-gold         { background-color: hsl(var(--gold)); }
+  .bg-gold-soft    { background-color: hsl(var(--gold-soft)); }
+  .bg-oxblood      { background-color: hsl(var(--oxblood)); }
+  .bg-forest       { background-color: hsl(var(--forest)); }
+
+  .border-gold     { border-color: hsl(var(--gold)); }
+  .border-oxblood  { border-color: hsl(var(--oxblood)); }
+  .border-forest   { border-color: hsl(var(--forest)); }
+
+  /* Editorial drop-cap helper for hero */
+  .drop-cap::first-letter {
+    font-family: var(--font-serif);
+    float: left;
+    font-size: 4.5rem;
+    line-height: 0.85;
+    padding-right: 0.5rem;
+    padding-top: 0.25rem;
+    color: hsl(var(--gold));
+    font-weight: 700;
+  }
+
+  /* Hairline divider — editorial */
+  .hairline {
+    border-top: 1px solid hsl(var(--foreground) / 0.1);
+  }
+
+  /* Numeric tabular for stat tiles */
+  .nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
 }
 
-/* ── Smooth animations ──────────────────────────────────────────────────── */
+/* ── Animations ────────────────────────────────────────────────────────── */
 
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+.animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.5s ease-out forwards;
-}
-
-/* Single pulse on mount — draws eye to the highest-impact finding */
 @keyframes pulse-once {
   0%   { opacity: 1; transform: scale(1); }
   30%  { opacity: 0.85; transform: scale(1.015); }
   60%  { opacity: 1; transform: scale(1); }
   100% { opacity: 1; transform: scale(1); }
 }
+.animate-pulse-once { animation: pulse-once 1.2s ease-out 0.4s both; }
 
-.animate-pulse-once {
-  animation: pulse-once 1.2s ease-out 0.4s both;
+/* Scroll-reveal — applied via IntersectionObserver in code */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* ── Scrollbar styling (dark mode) ──────────────────────────────────────── */
+/* Marquee — for ticker */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+
+/* Cursor blink for terminal feed */
+@keyframes blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.animate-blink { animation: blink 1s steps(1) infinite; }
+
+/* Slow rotate for ornament */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 18s linear infinite; }
+
+/* Number flip for ticker */
+@keyframes ticker-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-ticker-in {
+  animation: ticker-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Scanning line for loading */
+@keyframes scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+.animate-scan {
+  animation: scan 2.4s ease-in-out infinite;
+}
+
+/* ── Scrollbar — warm, editorial ──────────────────────────────────────── */
 
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: hsl(220 14% 20%);
+  background: hsl(var(--muted-foreground) / 0.25);
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(220 14% 30%);
+  background: hsl(var(--muted-foreground) / 0.4);
 }
 
-/* Hide scrollbar for nav strip */
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
-/* ── Print styles ─────────────────────────────────────────────────────── */
+/* ── Print ────────────────────────────────────────────────────────────── */
 @media print {
+  body::before { display: none !important; }
   #chat,
   #score ~ * > div[id="chat"],
   nav,
@@ -147,5 +257,9 @@
   body {
     background: white !important;
     color: black !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

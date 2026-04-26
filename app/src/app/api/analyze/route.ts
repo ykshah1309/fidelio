@@ -1,15 +1,15 @@
 /**
  * POST /api/analyze — Upload a PDF, get a Fidelio report via SSE stream.
  *
- * Flow:
- *   1. Accept multipart/form-data with a PDF file.
- *   2. Send the PDF to Claude with the system + extraction prompt.
- *   3. Handle tool use loop (MCP tools + local fund lookup).
- *   4. Parse <extraction> and <report> tags from Claude's response.
- *   5. Stream AnalyzeEvent objects to the frontend via SSE.
- *
- * If MCP bridge fails to connect, we still run — Claude can do the
- * extraction without external tools, just with degraded data.
+ * Performance + perception strategy:
+ *   1. ONE combined Claude call (extraction + report in a single response).
+ *   2. Tool execution parallelized across blocks within a turn.
+ *   3. Ephemeral prompt caching on system prompt + the PDF document block.
+ *   4. Streaming Claude inference so we can fire the `extraction` event
+ *      THE INSTANT </extraction> closes mid-stream — well before the report
+ *      finishes generating.
+ *   5. Narrator drips human-sounding status beats during the quiet stretches
+ *      so the loading screen never looks frozen.
  */
 
 import { NextRequest } from "next/server";
@@ -21,8 +21,7 @@ import {
 } from "@/lib/fund-lookup";
 import {
   SYSTEM_PROMPT,
-  EXTRACTION_PROMPT,
-  ANALYSIS_PROMPT,
+  COMBINED_ANALYSIS_PROMPT,
   TOOL_USE_GUIDANCE,
   EXTRACTION_FAILURE_MESSAGE,
 } from "@/lib/prompts";
@@ -33,10 +32,27 @@ import {
   type Extraction,
   type Report,
 } from "@/lib/types";
+import {
+  Narrator,
+  EXTRACTION_BEATS,
+  TOOL_BEATS,
+  ANALYSIS_BEATS,
+} from "@/lib/narrator";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120; // Vercel pro plan
+export const maxDuration = 120;
+
+// ─── Pre-warm MCP bridge at module load ──────────────────────────────────────
+if (
+  typeof process !== "undefined" &&
+  process.env.NODE_ENV !== "test" &&
+  process.env.NEXT_PHASE !== "phase-production-build"
+) {
+  void getFinancialHubBridge().catch(() => {
+    /* will retry lazily on first real request */
+  });
+}
 
 // ─── SSE helpers ──────────────────────────────────────────────────────────────
 
@@ -58,7 +74,7 @@ function createSSEStream() {
     try {
       controller.enqueue(encoder.encode(sseEncode(event)));
     } catch {
-      // stream may be closed
+      /* stream may be closed */
     }
   }
 
@@ -66,7 +82,7 @@ function createSSEStream() {
     try {
       controller.close();
     } catch {
-      // already closed
+      /* already closed */
     }
   }
 
@@ -78,7 +94,6 @@ function createSSEStream() {
 export async function POST(request: NextRequest) {
   const { stream, send, close } = createSSEStream();
 
-  // Start async processing
   processAnalysis(request, send).finally(() => {
     send({ type: "done" });
     close();
@@ -98,25 +113,61 @@ async function processAnalysis(
   request: NextRequest,
   send: (event: AnalyzeEvent) => void,
 ) {
-  // ── 1. Parse the uploaded PDF ──────────────────────────────────────────────
+  const t0 = Date.now();
+
+  // Narrator drips status beats while the model thinks.
+  const narrator = new Narrator((message) =>
+    send({ type: "status", message }),
+  );
+
+  // ── 1. Read PDF + connect to MCP in parallel ──────────────────────────────
 
   send({ type: "status", message: "Receiving document…" });
 
-  let pdfBase64: string;
-  let mediaType: string;
-
-  try {
+  const MAX_PDF_BYTES = 15 * 1024 * 1024;
+  const pdfPromise = (async () => {
     const formData = await request.formData();
     const file = formData.get("file");
     if (!file || !(file instanceof File)) {
-      send({ type: "error", message: "No PDF file found in the upload." });
-      return;
+      throw new Error("No PDF file found in the upload.");
     }
-
+    if (file.size === 0) {
+      throw new Error("Uploaded file is empty (0 bytes).");
+    }
+    if (file.size > MAX_PDF_BYTES) {
+      throw new Error(
+        `Uploaded PDF is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 15 MB.`,
+      );
+    }
     const buffer = Buffer.from(await file.arrayBuffer());
-    pdfBase64 = buffer.toString("base64");
-    mediaType = file.type || "application/pdf";
+    // Sanity-check the magic bytes — every valid PDF starts with "%PDF-"
+    const magic = buffer.subarray(0, 5).toString("utf8");
+    if (magic !== "%PDF-") {
+      throw new Error(
+        "That doesn't look like a real PDF. Download a fresh copy directly from your plan provider's site (sometimes browsers save HTML 'preview' pages as .pdf by accident).",
+      );
+    }
+    return {
+      pdfBase64: buffer.toString("base64"),
+      // Force the canonical PDF media type — Anthropic requires "application/pdf"
+      // exactly, and some browsers send "application/octet-stream" or empty.
+      mediaType: "application/pdf",
+    };
+  })();
+
+  const mcpPromise = getFinancialHubBridge().catch((err) => {
+    console.error("[Fidelio] MCP bridge failed:", err);
+    return null;
+  });
+
+  let pdfBase64: string;
+  let mediaType: string;
+  try {
+    const result = await pdfPromise;
+    pdfBase64 = result.pdfBase64;
+    mediaType = result.mediaType;
   } catch (err) {
+    narrator.stop();
     send({
       type: "error",
       message: `Failed to read uploaded file: ${err instanceof Error ? err.message : String(err)}`,
@@ -124,25 +175,26 @@ async function processAnalysis(
     return;
   }
 
-  // ── 2. Connect to MCP (non-blocking — degrade gracefully) ─────────────────
-
-  send({ type: "status", message: "Connecting to financial data…" });
-
   let mcpBridge: MCPBridge | null = null;
   let mcpTools: Array<{ name: string; description: string; input_schema: unknown }> = [];
 
   try {
-    mcpBridge = await getFinancialHubBridge();
-    mcpTools = await mcpBridge.listTools();
-  } catch (err) {
-    console.error("[Fidelio] MCP bridge failed to connect:", err);
+    mcpBridge = await mcpPromise;
+    if (mcpBridge) {
+      mcpTools = await mcpBridge.listTools();
+    }
+  } catch {
+    /* tolerated — local-only mode */
+  }
+
+  if (!mcpBridge) {
     send({
       type: "status",
       message: "Live market data unavailable — analyzing with document data only.",
     });
   }
 
-  // ── 3. Build tool definitions for Claude ───────────────────────────────────
+  // ── 2. Tool definitions + cached system blocks ────────────────────────────
 
   const tools = [
     ...mcpTools.map((t) => ({
@@ -157,16 +209,29 @@ async function processAnalysis(
     },
   ];
 
-  // ── 4. Initial Claude call — extraction ────────────────────────────────────
+  type SystemBlock = { type: "text"; text: string; cache_control?: { type: "ephemeral" } };
+  const systemBlocks: SystemBlock[] = [
+    {
+      type: "text",
+      text: SYSTEM_PROMPT,
+      cache_control: { type: "ephemeral" },
+    },
+    {
+      type: "text",
+      text: TOOL_USE_GUIDANCE,
+    },
+  ];
 
-  send({ type: "status", message: "Reading document…" });
-
-  const anthropic = getAnthropic();
-  const systemPrompt = `${SYSTEM_PROMPT}\n\n${TOOL_USE_GUIDANCE}`;
-
+  type DocumentBlock = {
+    type: "document";
+    source: { type: "base64"; media_type: string; data: string };
+    cache_control?: { type: "ephemeral" };
+  };
+  type TextBlock = { type: "text"; text: string };
+  type UserContent = DocumentBlock | TextBlock;
   type MessageParam = {
     role: "user" | "assistant";
-    content: unknown;
+    content: UserContent[] | unknown;
   };
 
   const messages: MessageParam[] = [
@@ -180,34 +245,79 @@ async function processAnalysis(
             media_type: mediaType,
             data: pdfBase64,
           },
+          cache_control: { type: "ephemeral" },
         },
         {
           type: "text",
-          text: EXTRACTION_PROMPT,
+          text: COMBINED_ANALYSIS_PROMPT,
         },
       ],
     },
   ];
 
-  // ── 5. Agent loop — handle tool use ────────────────────────────────────────
+  // ── 3. Streaming agent loop ───────────────────────────────────────────────
 
+  send({ type: "status", message: "Reading document…" });
+  narrator.play(EXTRACTION_BEATS);
+
+  const anthropic = getAnthropic();
   let fullText = "";
+  let extractionSent = false;
   let loopCount = 0;
-  const MAX_LOOPS = 10;
+  const MAX_LOOPS = 6;
 
   while (loopCount < MAX_LOOPS) {
     loopCount++;
 
-    let response;
+    let finalMessage;
+    let runningText = "";
     try {
-      response = await anthropic.messages.create({
+      const stream = anthropic.messages.stream({
         model: MODEL,
         max_tokens: 8192,
-        system: systemPrompt,
+        system: systemBlocks as unknown as Parameters<typeof anthropic.messages.create>[0]["system"],
         messages: messages as Parameters<typeof anthropic.messages.create>[0]["messages"],
         tools: tools as Parameters<typeof anthropic.messages.create>[0]["tools"],
       });
+
+      // Iterate raw events so we can detect tag closures mid-stream.
+      for await (const event of stream) {
+        if (
+          event.type === "content_block_delta" &&
+          "delta" in event &&
+          event.delta.type === "text_delta"
+        ) {
+          runningText += event.delta.text;
+
+          // Early-emit the extraction the instant </extraction> closes.
+          if (!extractionSent && runningText.includes("</extraction>")) {
+            const combinedText = fullText + runningText;
+            const rawExtraction = extractTaggedJson<unknown>(combinedText, "extraction");
+            if (rawExtraction) {
+              extractionSent = true;
+              let extraction: Extraction;
+              try {
+                extraction = ExtractionSchema.parse(rawExtraction);
+              } catch {
+                extraction = rawExtraction as Extraction;
+              }
+              send({ type: "extraction", data: extraction });
+              // Now that data is extracted, swap the narrator over to
+              // analysis-flavored beats so the river stays coherent.
+              narrator.shift(ANALYSIS_BEATS);
+              send({
+                type: "status",
+                message: "Translation complete — drafting your report…",
+              });
+            }
+          }
+        }
+      }
+
+      finalMessage = await stream.finalMessage();
+      fullText += runningText;
     } catch (err) {
+      narrator.stop();
       send({
         type: "error",
         message: `Claude API error: ${err instanceof Error ? err.message : String(err)}`,
@@ -215,33 +325,31 @@ async function processAnalysis(
       return;
     }
 
-    // Collect text from this response
-    const responseText = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => ("text" in b ? (b as { text: string }).text : ""))
-      .join("");
-    fullText += responseText;
-
-    // Handle tool use blocks
-    const toolUseBlocks = response.content
+    // Tool use blocks (the SDK assembled them for us in finalMessage)
+    const toolUseBlocks = finalMessage.content
       .filter((b) => b.type === "tool_use")
       .map((b) => b as unknown as { type: "tool_use"; id: string; name: string; input: Record<string, unknown> });
 
-    if (toolUseBlocks.length > 0) {
-      // Add assistant's response to messages
-      messages.push({
-        role: "assistant",
-        content: response.content,
+    if (toolUseBlocks.length === 0) {
+      break;
+    }
+
+    // Real tool calls are about to fire — swap narrator to tool flavor.
+    narrator.shift(TOOL_BEATS);
+    if (toolUseBlocks.length === 1) {
+      send({ type: "status", message: `Looking up ${toolUseBlocks[0].name}…` });
+    } else {
+      send({
+        type: "status",
+        message: `Looking up ${toolUseBlocks.length} fund/data points in parallel…`,
       });
+    }
 
-      // Execute each tool call
-      const toolResults: Array<{
-        type: "tool_result";
-        tool_use_id: string;
-        content: string;
-      }> = [];
+    messages.push({ role: "assistant", content: finalMessage.content });
 
-      for (const toolBlock of toolUseBlocks) {
+    // ── Run all tool calls in parallel ──────────────────────────────────
+    const toolResults = await Promise.all(
+      toolUseBlocks.map(async (toolBlock) => {
         send({
           type: "tool_call",
           tool: toolBlock.name,
@@ -249,91 +357,65 @@ async function processAnalysis(
         });
 
         let toolResult: unknown;
-
-        if (toolBlock.name === "lookup_fund_expense_ratio") {
-          // Local tool
-          send({ type: "status", message: `Looking up fund data for ${(toolBlock.input as Record<string,string>).ticker ?? "unknown"}…` });
-          toolResult = runLookupFundTool(toolBlock.input);
-        } else if (mcpBridge) {
-          // MCP tool
-          const friendlyNames: Record<string, string> = {
-            get_stock_quote: "Fetching live quote",
-            get_company_overview: "Looking up company details",
-            get_economic_data: "Checking economic indicators",
-            search_companies: "Searching company records",
-          };
-          send({
-            type: "status",
-            message: `${friendlyNames[toolBlock.name] ?? toolBlock.name}…`,
-          });
-
-          try {
+        try {
+          if (toolBlock.name === "lookup_fund_expense_ratio") {
+            toolResult = runLookupFundTool(toolBlock.input);
+          } else if (mcpBridge) {
             toolResult = await mcpBridge.callTool(toolBlock.name, toolBlock.input);
-          } catch (err) {
+          } else {
             toolResult = {
               error: true,
-              message: `Tool call failed: ${err instanceof Error ? err.message : String(err)}`,
+              message: "Financial data service unavailable. Analyze without this data.",
             };
           }
-        } else {
+        } catch (err) {
           toolResult = {
             error: true,
-            message: "Financial data service unavailable. Analyze without this data.",
+            message: `Tool call failed: ${err instanceof Error ? err.message : String(err)}`,
           };
         }
 
-        send({
-          type: "tool_result",
-          tool: toolBlock.name,
-          result: toolResult,
-        });
+        send({ type: "tool_result", tool: toolBlock.name, result: toolResult });
 
-        toolResults.push({
-          type: "tool_result",
+        return {
+          type: "tool_result" as const,
           tool_use_id: toolBlock.id,
           content: JSON.stringify(toolResult),
-        });
-      }
+        };
+      }),
+    );
 
-      // Add tool results to messages
-      messages.push({
-        role: "user",
-        content: toolResults,
-      });
+    messages.push({ role: "user", content: toolResults });
 
-      // Continue the loop — Claude needs to process tool results
-      continue;
-    }
-
-    // No tool use — Claude finished this turn
-    if (response.stop_reason === "end_turn") {
-      break;
-    }
-
-    break;
+    // After tools, Claude moves to the report — line up analysis beats.
+    narrator.shift(ANALYSIS_BEATS);
   }
 
-  // ── 6. Parse extraction ────────────────────────────────────────────────────
+  // ── 4. Parse extraction + report ──────────────────────────────────────────
 
-  send({ type: "status", message: "Processing extracted data…" });
+  // If we didn't catch </extraction> mid-stream (shouldn't happen, but
+  // defensive), still emit it now so the UI advances.
+  if (!extractionSent) {
+    const rawExtraction = extractTaggedJson<unknown>(fullText, "extraction");
+    if (rawExtraction) {
+      let extraction: Extraction;
+      try {
+        extraction = ExtractionSchema.parse(rawExtraction);
+      } catch {
+        extraction = rawExtraction as Extraction;
+      }
+      send({ type: "extraction", data: extraction });
+      extractionSent = true;
+    }
+  }
 
-  const rawExtraction = extractTaggedJson<unknown>(fullText, "extraction");
-  if (!rawExtraction) {
+  if (!extractionSent) {
+    narrator.stop();
+    console.error("[Fidelio] No <extraction> tag in Claude response. Length=" + fullText.length);
+    console.error("[Fidelio] First 1500 chars of response:\n" + fullText.slice(0, 1500));
     send({ type: "error", message: EXTRACTION_FAILURE_MESSAGE });
     return;
   }
-
-  let extraction: Extraction;
-  try {
-    extraction = ExtractionSchema.parse(rawExtraction);
-  } catch {
-    // Soft-parse: try to use what we got even if Zod is strict
-    extraction = rawExtraction as Extraction;
-  }
-
-  send({ type: "extraction", data: extraction });
-
-  // ── 7. Check if report is already in the response ──────────────────────────
 
   let report: Report | null = null;
   const rawReport = extractTaggedJson<unknown>(fullText, "report");
@@ -345,114 +427,17 @@ async function processAnalysis(
     }
   }
 
-  // ── 8. If no report yet, ask Claude for the analysis ───────────────────────
-
-  if (!report) {
-    send({ type: "status", message: "Writing your report…" });
-
-    messages.push({
-      role: "user",
-      content: ANALYSIS_PROMPT,
-    });
-
-    // Second agent loop for analysis
-    let analysisText = "";
-    let analysisLoops = 0;
-
-    while (analysisLoops < MAX_LOOPS) {
-      analysisLoops++;
-
-      let response;
-      try {
-        response = await anthropic.messages.create({
-          model: MODEL,
-          max_tokens: 8192,
-          system: systemPrompt,
-          messages: messages as Parameters<typeof anthropic.messages.create>[0]["messages"],
-          tools: tools as Parameters<typeof anthropic.messages.create>[0]["tools"],
-        });
-      } catch (err) {
-        send({
-          type: "error",
-          message: `Claude API error during analysis: ${err instanceof Error ? err.message : String(err)}`,
-        });
-        return;
-      }
-
-      const analysisTextParts = response.content
-        .filter((b) => b.type === "text")
-        .map((b) => ("text" in b ? (b as { text: string }).text : ""));
-      analysisText += analysisTextParts.join("");
-
-      const toolUseBlocks = response.content
-        .filter((b) => b.type === "tool_use")
-        .map((b) => b as unknown as { type: "tool_use"; id: string; name: string; input: Record<string, unknown> });
-
-      if (toolUseBlocks.length > 0) {
-        messages.push({ role: "assistant", content: response.content });
-
-        const toolResults: Array<{
-          type: "tool_result";
-          tool_use_id: string;
-          content: string;
-        }> = [];
-
-        for (const toolBlock of toolUseBlocks) {
-          send({
-            type: "tool_call",
-            tool: toolBlock.name,
-            input: toolBlock.input,
-          });
-
-          let toolResult: unknown;
-          if (toolBlock.name === "lookup_fund_expense_ratio") {
-            toolResult = runLookupFundTool(toolBlock.input);
-          } else if (mcpBridge) {
-            try {
-              toolResult = await mcpBridge.callTool(toolBlock.name, toolBlock.input);
-            } catch (err) {
-              toolResult = {
-                error: true,
-                message: `Tool call failed: ${err instanceof Error ? err.message : String(err)}`,
-              };
-            }
-          } else {
-            toolResult = { error: true, message: "Financial data service unavailable." };
-          }
-
-          send({ type: "tool_result", tool: toolBlock.name, result: toolResult });
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolBlock.id,
-            content: JSON.stringify(toolResult),
-          });
-        }
-
-        messages.push({ role: "user", content: toolResults });
-        continue;
-      }
-
-      break;
-    }
-
-    const rawAnalysisReport = extractTaggedJson<unknown>(analysisText, "report");
-    if (rawAnalysisReport) {
-      try {
-        report = ReportSchema.parse(rawAnalysisReport);
-      } catch {
-        report = rawAnalysisReport as Report;
-      }
-    }
-  }
-
-  // ── 9. Send the final report ───────────────────────────────────────────────
+  narrator.stop();
 
   if (report) {
+    send({ type: "status", message: "Polishing the final layout…" });
     send({ type: "report", data: report });
+    console.log(`[Fidelio] /api/analyze completed in ${Date.now() - t0}ms`);
   } else {
     send({
       type: "error",
-      message: "Could not generate a structured report from this document. Please try a different PDF.",
+      message:
+        "Could not generate a structured report from this document. Please try a different PDF.",
     });
   }
 }

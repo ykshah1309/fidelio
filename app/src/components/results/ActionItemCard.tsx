@@ -9,9 +9,9 @@ interface ActionItemCardProps {
 }
 
 const effortConfig = {
-  "5_minutes": { label: "5 min", color: "text-emerald-400 bg-emerald-500/15" },
-  "30_minutes": { label: "30 min", color: "text-sky-400 bg-sky-500/15" },
-  this_week: { label: "This week", color: "text-amber-400 bg-amber-500/15" },
+  "5_minutes": { label: "5 min", color: "text-forest bg-forest/15" },
+  "30_minutes": { label: "30 min", color: "text-gold-soft bg-gold-soft/15" },
+  this_week: { label: "This week", color: "text-gold bg-gold/15" },
 };
 
 const CONSEQUENTIAL_KEYWORDS = [
@@ -47,12 +47,15 @@ export function ActionItemCard({ actionItems }: ActionItemCardProps) {
   }
 
   return (
-    <div id="actions" className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-border/50">
-        <h2 className="text-lg font-semibold text-foreground">
+    <div id="actions" className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+      <div className="px-7 py-5 border-b border-border/50">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+          VII · Action
+        </span>
+        <h2 className="font-serif text-2xl font-bold tracking-editorial text-foreground mt-0.5">
           Three Things to Do This Week
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1.5">
           Concrete, specific, doable without a financial advisor.
         </p>
       </div>
@@ -78,10 +81,10 @@ export function ActionItemCard({ actionItems }: ActionItemCardProps) {
                   onClick={() => toggleDone(i)}
                   title={isDone ? "Mark as not done" : "Mark as done"}
                   className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-bold transition-colors",
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-base font-bold transition-colors",
                     isDone
-                      ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400"
-                      : "border-primary/20 bg-primary/10 text-primary hover:border-primary/40",
+                      ? "border-forest/60 bg-forest/20 text-forest"
+                      : "border-gold/40 bg-gold/10 text-gold hover:border-gold",
                   )}
                 >
                   {isDone ? (
@@ -107,7 +110,7 @@ export function ActionItemCard({ actionItems }: ActionItemCardProps) {
                       {effort.label}
                     </span>
                     {item.impact_usd_annual != null && (
-                      <span className="text-xs text-emerald-400 font-medium">
+                      <span className="text-xs text-forest font-semibold nums font-mono uppercase tracking-widest">
                         +{formatUSD(item.impact_usd_annual)}/yr
                       </span>
                     )}
@@ -119,11 +122,11 @@ export function ActionItemCard({ actionItems }: ActionItemCardProps) {
 
                   {/* Friction callout for consequential actions */}
                   {showFriction && !isDone && (
-                    <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-                      <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <div className="mt-3 flex items-start gap-2 rounded-md border border-gold/30 bg-gold/5 px-3 py-2">
+                      <svg className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                       </svg>
-                      <p className="text-xs text-amber-400/90 leading-relaxed">
+                      <p className="text-xs text-gold leading-relaxed">
                         This is a consequential change. Verify the steps with your plan administrator before acting.
                       </p>
                     </div>
@@ -136,10 +139,10 @@ export function ActionItemCard({ actionItems }: ActionItemCardProps) {
                   >
                     {isCopied ? (
                       <>
-                        <svg className="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                        <svg className="h-3.5 w-3.5 text-forest" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                         </svg>
-                        <span className="text-emerald-400">Copied!</span>
+                        <span className="text-forest">Copied!</span>
                       </>
                     ) : (
                       <>

@@ -37,50 +37,50 @@ export function AuditLog({ events, isOpen, onToggle }: AuditLogProps) {
   if (relevantEvents.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
+    <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full px-6 py-3 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
+        className="w-full px-7 py-3.5 flex items-center justify-between text-left hover:bg-foreground/[0.02] transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-sm font-medium text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <div className="h-2 w-2 rounded-full bg-forest animate-pulse" />
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Data Provenance
           </span>
-          <span className="text-xs text-muted-foreground/60">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">
             {relevantEvents.length} events
           </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {isOpen ? "▲ Hide" : "How Fidelio got this data ↓"}
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          {isOpen ? "▲ Hide" : "Audit Trail ↓"}
         </span>
       </button>
 
       {isOpen && (
         <ScrollArea className="h-48 border-t border-border/30">
-          <div ref={scrollRef} className="px-4 py-2 font-mono text-xs space-y-1">
+          <div ref={scrollRef} className="px-4 py-3 font-mono text-[11px] space-y-1">
             {relevantEvents.map((event, i) => (
               <div key={i} className="flex gap-2">
                 <span className="text-muted-foreground/50 shrink-0 w-8 text-right">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 {event.type === "status" && (
-                  <span className="text-sky-400">
+                  <span className="text-gold">
                     ● {event.message}
                   </span>
                 )}
                 {event.type === "tool_call" && (
-                  <span className="text-amber-400">
+                  <span className="text-gold-soft">
                     → {event.tool}({JSON.stringify(event.input)})
                   </span>
                 )}
                 {event.type === "tool_result" && (
-                  <span className={cn("text-emerald-400 truncate")}>
+                  <span className={cn("text-forest truncate")}>
                     ← {event.tool}: {typeof event.result === "string" ? event.result : JSON.stringify(event.result).slice(0, 120)}
                   </span>
                 )}
                 {event.type === "error" && (
-                  <span className="text-rose-400">
+                  <span className="text-oxblood">
                     ✕ {event.message}
                   </span>
                 )}

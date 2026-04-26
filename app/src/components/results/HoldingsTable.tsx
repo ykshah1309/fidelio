@@ -11,17 +11,17 @@ interface HoldingsTableProps {
 }
 
 const verdictConfig = {
-  good: { color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", label: "Low cost" },
-  okay: { color: "bg-sky-500/20 text-sky-300 border-sky-500/30", label: "Reasonable" },
-  expensive: { color: "bg-rose-500/20 text-rose-300 border-rose-500/30", label: "Expensive" },
-  unknown: { color: "bg-zinc-500/20 text-zinc-300 border-zinc-500/30", label: "Unknown" },
+  good: { color: "bg-forest/15 text-forest border-forest/40", label: "Low cost" },
+  okay: { color: "bg-gold/15 text-gold border-gold/40", label: "Reasonable" },
+  expensive: { color: "bg-oxblood/15 text-oxblood border-oxblood/40", label: "Expensive" },
+  unknown: { color: "bg-muted text-muted-foreground border-border", label: "Unknown" },
 };
 
 const allocationBarColor: Record<string, string> = {
-  good: "bg-emerald-500",
-  okay: "bg-sky-500",
-  expensive: "bg-rose-500",
-  unknown: "bg-zinc-500",
+  good: "bg-forest",
+  okay: "bg-gold",
+  expensive: "bg-oxblood",
+  unknown: "bg-muted-foreground",
 };
 
 // ER dot on scale 0–1.5%
@@ -29,10 +29,10 @@ function ERDot({ er, verdict }: { er: number; verdict: string }) {
   const clampedPct = Math.min(100, (er / 1.5) * 100);
   return (
     <div className="flex items-center gap-2 mt-1.5">
-      <div className="relative h-1 flex-1 rounded-full bg-white/10">
+      <div className="relative h-1 flex-1 rounded-full bg-foreground/10">
         {/* Benchmark marker at 0.10% */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 h-2.5 w-px bg-emerald-500/50"
+          className="absolute top-1/2 -translate-y-1/2 h-2.5 w-px bg-forest/60"
           style={{ left: `${(0.1 / 1.5) * 100}%` }}
           title="0.10% — index fund benchmark"
         />
@@ -40,15 +40,15 @@ function ERDot({ er, verdict }: { er: number; verdict: string }) {
         <div
           className={cn(
             "absolute top-1/2 -translate-y-1/2 h-2 w-2 rounded-full -ml-1",
-            verdict === "expensive" ? "bg-rose-400" : verdict === "good" ? "bg-emerald-400" : "bg-sky-400",
+            verdict === "expensive" ? "bg-oxblood" : verdict === "good" ? "bg-forest" : "bg-gold",
           )}
           style={{ left: `${clampedPct}%` }}
           title={`${er}% expense ratio`}
         />
       </div>
       <span className={cn(
-        "text-xs font-mono shrink-0",
-        verdict === "expensive" ? "text-rose-400" : "text-muted-foreground",
+        "text-xs font-mono shrink-0 nums",
+        verdict === "expensive" ? "text-oxblood" : "text-muted-foreground",
       )}>
         {formatPct(er)} ER
       </span>
@@ -87,9 +87,9 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
       <button
         onClick={() => toggleSort(k)}
         className={cn(
-          "text-xs px-2 py-1 rounded transition-colors",
+          "font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded transition-colors",
           isActive
-            ? "text-foreground bg-white/10"
+            ? "text-gold bg-gold/10"
             : "text-muted-foreground/60 hover:text-muted-foreground",
         )}
       >
@@ -99,16 +99,19 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
   }
 
   return (
-    <div id="holdings" className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between gap-4">
+    <div id="holdings" className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+      <div className="px-7 py-5 border-b border-border/50 flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">What You Own</h2>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+            II · Holdings Review
+          </span>
+          <h2 className="font-serif text-2xl font-bold tracking-editorial text-foreground mt-0.5">What You Own</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Every fund in your account, explained in plain English.
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <span className="text-xs text-muted-foreground/50 mr-1">Sort:</span>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mr-1">Sort</span>
           <SortButton k="balance" label="Balance" />
           <SortButton k="expense_ratio" label="ER" />
           <SortButton k="allocation" label="%" />
@@ -120,7 +123,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
           const config = verdictConfig[holding.verdict];
           const allocPct = holding.allocation_pct ?? 0;
           return (
-            <div key={i} className="px-6 py-5 hover:bg-white/[0.02] transition-colors">
+            <div key={i} className="px-7 py-5 hover:bg-foreground/[0.02] transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
@@ -153,20 +156,20 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
 
                 <div className="text-right shrink-0 space-y-1.5 min-w-[100px]">
                   {holding.balance_usd != null && (
-                    <p className="text-lg font-semibold text-foreground">
+                    <p className="font-serif text-xl font-semibold text-foreground nums">
                       {formatUSD(holding.balance_usd)}
                     </p>
                   )}
                   {/* Allocation bar */}
                   {allocPct > 0 && (
                     <div className="flex items-center gap-2 justify-end">
-                      <div className="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div className="w-20 h-1.5 rounded-full bg-foreground/10 overflow-hidden">
                         <div
                           className={cn("h-full rounded-full", allocationBarColor[holding.verdict])}
                           style={{ width: `${Math.min(100, allocPct)}%` }}
                         />
                       </div>
-                      <span className="text-xs text-muted-foreground w-10 text-left">
+                      <span className="text-xs text-muted-foreground w-10 text-left nums">
                         {formatPct(allocPct, 0)}
                       </span>
                     </div>
@@ -179,9 +182,9 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
       </div>
 
       {/* ER legend footnote */}
-      <div className="px-6 py-3 border-t border-border/30 bg-muted/10">
-        <p className="text-xs text-muted-foreground/60">
-          ER bar scale: 0% → 1.5%. Green marker = 0.10% <FinanceTerm term="index fund">index fund</FinanceTerm> benchmark.
+      <div className="px-7 py-3 border-t border-border/30 bg-muted/10">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+          ER scale 0% → 1.5% · gold marker = 0.10% <FinanceTerm term="index fund">index fund</FinanceTerm> benchmark
         </p>
       </div>
     </div>

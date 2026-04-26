@@ -16,6 +16,8 @@ import { PaystubCard } from "@/components/results/PaystubCard";
 import { LoadingState } from "@/components/LoadingState";
 import { ReportNav } from "@/components/ReportNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { HeroTicker } from "@/components/HeroTicker";
+import { Reveal } from "@/components/Reveal";
 
 type AppState =
   | { phase: "upload" }
@@ -28,7 +30,6 @@ type AppState =
     }
   | { phase: "error"; message: string; events: AnalyzeEvent[] };
 
-/** Detect scanned-image PDF error messages for a user-friendly hint */
 function isScannedPdfError(msg: string): boolean {
   const lower = msg.toLowerCase();
   return (
@@ -42,6 +43,37 @@ function isScannedPdfError(msg: string): boolean {
   );
 }
 
+const MAX_PDF_BYTES = 15 * 1024 * 1024; // 15 MB — well above any real statement
+
+/** Validate a user-uploaded file before sending it to /api/analyze. */
+function validatePdfFile(file: File): { ok: true } | { ok: false; message: string } {
+  if (file.size === 0) {
+    return {
+      ok: false,
+      message: "That file is empty (0 bytes). Try downloading a fresh copy from your plan provider.",
+    };
+  }
+  if (file.size > MAX_PDF_BYTES) {
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    return {
+      ok: false,
+      message: `That PDF is ${mb} MB — too large to analyze. Most 401(k) statements are under 5 MB. Try downloading the most recent one only.`,
+    };
+  }
+  // Some browsers leave file.type empty for drag-drop. Fall back to extension.
+  const looksLikePdfByType = file.type === "application/pdf";
+  const looksLikePdfByName = /\.pdf$/i.test(file.name);
+  if (!looksLikePdfByType && !looksLikePdfByName) {
+    return {
+      ok: false,
+      message: `Only PDFs are supported. ${
+        file.name ? `"${file.name}" doesn't look like a PDF.` : "That file doesn't look like a PDF."
+      } Download a statement directly from your plan provider as a PDF.`,
+    };
+  }
+  return { ok: true };
+}
+
 export default function Home() {
   const [state, setState] = useState<AppState>({ phase: "upload" });
   const [isDragOver, setIsDragOver] = useState(false);
@@ -52,12 +84,25 @@ export default function Home() {
   // ── Upload & analysis flow ─────────────────────────────────────────────────
 
   const analyzeFile = useCallback(async (file: File) => {
-    const events: AnalyzeEvent[] = [];
+    // Validate before kicking off the network call
+    const v = validatePdfFile(file);
+    if (!v.ok) {
+      setState({ phase: "error", message: v.message, events: [] });
+      return;
+    }
 
+    const events: AnalyzeEvent[] = [];
     setState({ phase: "analyzing", statusMessage: "Uploading…", events });
 
+    // Force PDF MIME type — browsers sometimes hand us "" or
+    // "application/octet-stream" for drag-drops, which Anthropic rejects.
+    const pdfFile =
+      file.type === "application/pdf"
+        ? file
+        : new File([file], file.name, { type: "application/pdf" });
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", pdfFile);
 
     try {
       const res = await fetch("/api/analyze", {
@@ -195,14 +240,12 @@ export default function Home() {
       });
 
       try {
-        // Try to load live from /api/analyze with a sample PDF
         const res = await fetch(`/samples/${sampleName}`);
         if (!res.ok) throw new Error("Sample not available");
         const blob = await res.blob();
         const file = new File([blob], sampleName, { type: "application/pdf" });
         analyzeFile(file);
       } catch {
-        // Fallback to gold report
         const goldFile = sampleName.includes("paystub")
           ? "gold-report-paystub"
           : "gold-report-401k";
@@ -221,7 +264,6 @@ export default function Home() {
             ],
           });
         } catch {
-          // Final fallback: import the JSON directly
           try {
             const goldModule = await import(
               `../../samples/${goldFile}.json`
@@ -262,127 +304,244 @@ export default function Home() {
   // Upload screen
   if (state.phase === "upload") {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
-        {/* Theme toggle — top right */}
-        <div className="absolute top-5 right-5">
-          <ThemeToggle />
+      <main className="relative min-h-screen overflow-hidden">
+        {/* Top nameplate bar — editorial */}
+        <header className="relative z-20 flex items-center justify-between px-6 sm:px-10 py-5 border-b border-border/40">
+          <div className="flex items-center gap-3">
+            <svg className="h-6 w-6 text-gold" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M12 12L3 7M12 12l9-5M12 12v10" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+            <div className="flex flex-col leading-none">
+              <span className="font-serif text-base font-bold tracking-editorial text-foreground">
+                Fidelio
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/70">
+                A Faithful Reader · Vol. I
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+            <span className="hidden sm:inline">Built with Claude Sonnet 4.6</span>
+            <ThemeToggle />
+          </div>
+        </header>
+
+        {/* Background ornaments */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-gold/10 via-transparent to-oxblood/5 blur-3xl" />
+          <div className="absolute top-24 left-10 h-32 w-32 rounded-full border border-gold/20 animate-spin-slow" />
+          <div className="absolute bottom-24 right-10 h-24 w-24 rounded-full border border-oxblood/20 animate-spin-slow" style={{ animationDirection: "reverse" }} />
         </div>
 
-        {/* Background effects */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-amber-500/5 via-transparent to-rose-500/5 blur-3xl" />
+        {/* Hero */}
+        <section className="relative z-10 px-6 sm:px-10 pt-16 sm:pt-24 pb-12">
+          <div className="mx-auto max-w-3xl text-center">
+            {/* Eyebrow */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-4 py-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-gold animate-pulse" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-gold">
+                Spring 2026 · Economic Empowerment
+              </span>
+            </div>
 
-        <div className="relative max-w-xl text-center">
-          <h1 className="text-5xl sm:text-6xl font-serif leading-tight tracking-tight text-foreground">
-            Your 401(k) is trying to tell you something.
-          </h1>
-          <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-            Drop the PDF. Claude will translate.
-          </p>
+            {/* Hero headline */}
+            <h1 className="mt-8 font-serif text-5xl sm:text-7xl font-bold tracking-editorial leading-[1.02] text-foreground">
+              Your 401(k) is{" "}
+              <span className="italic text-gold">trying to tell</span>{" "}
+              you something.
+            </h1>
 
-          {/* Drop zone */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragOver(true);
-            }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`mt-10 rounded-2xl border-2 border-dashed p-12 cursor-pointer transition-all duration-300 ${
-              isDragOver
-                ? "border-amber-500/60 bg-amber-500/5 scale-[1.02]"
-                : "border-border/50 bg-card/30 hover:border-border hover:bg-card/50"
-            }`}
-          >
-            <div className="flex flex-col items-center gap-3">
-              <svg
-                className={`h-10 w-10 transition-colors ${
-                  isDragOver ? "text-amber-500" : "text-muted-foreground/40"
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-                />
-              </svg>
-              {isDragOver ? (
-                <p className="text-sm text-amber-400 font-medium">Drop your PDF here</p>
-              ) : droppedFileName ? (
-                <p className="text-sm text-emerald-400 font-medium">
-                  ✓ {droppedFileName} — click to change
-                </p>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Drag your 401(k) statement or paystub here
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+              Drop the PDF. Claude reads it. You find out — in plain English —
+              exactly what you&apos;re paying, what you&apos;re missing, and the one
+              thing to do this week.
+            </p>
+
+            {/* Live insight ticker */}
+            <div className="flex justify-center">
+              <HeroTicker />
+            </div>
+
+            {/* Drop zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`mt-10 group relative rounded-2xl border-2 border-dashed p-10 cursor-pointer transition-all duration-300 ${
+                isDragOver
+                  ? "border-gold bg-gold/10 scale-[1.01]"
+                  : "border-border/60 bg-card/30 hover:border-gold/60 hover:bg-card/60"
+              }`}
+            >
+              {/* Decorative corner marks — editorial */}
+              <span className="absolute top-2 left-2 h-3 w-3 border-t border-l border-gold/40" />
+              <span className="absolute top-2 right-2 h-3 w-3 border-t border-r border-gold/40" />
+              <span className="absolute bottom-2 left-2 h-3 w-3 border-b border-l border-gold/40" />
+              <span className="absolute bottom-2 right-2 h-3 w-3 border-b border-r border-gold/40" />
+
+              <div className="flex flex-col items-center gap-3">
+                <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${
+                  isDragOver ? "bg-gold/20" : "bg-muted/50 group-hover:bg-gold/10"
+                }`}>
+                  <svg
+                    className={`h-6 w-6 transition-colors ${
+                      isDragOver ? "text-gold" : "text-muted-foreground/60 group-hover:text-gold"
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+                    />
+                  </svg>
+                </div>
+                {isDragOver ? (
+                  <p className="text-sm text-gold font-medium">Drop your PDF here</p>
+                ) : droppedFileName ? (
+                  <p className="text-sm text-forest font-medium">
+                    ✓ {droppedFileName} — click to change
                   </p>
-                  <p className="text-xs text-muted-foreground/60">
-                    or click to browse
-                  </p>
-                </>
-              )}
-              <p className="text-xs text-muted-foreground/40">
-                PDF only · analyzed in memory · nothing is saved
-              </p>
+                ) : (
+                  <>
+                    <p className="text-base text-foreground font-medium">
+                      Drag your 401(k) statement or paystub here
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      or click to browse · PDF only
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            {/* Sample CTAs — branded */}
+            <div className="mt-6 flex flex-col items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+                Or try a sample — no upload needed
+              </span>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  onClick={() => loadSample("sample-401k.pdf")}
+                  className="group flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-5 py-2.5 text-sm font-medium text-gold hover:bg-gold/20 hover:border-gold transition-all"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
+                  </svg>
+                  Sample 401(k) Statement
+                </button>
+                <button
+                  onClick={() => loadSample("sample-paystub.pdf")}
+                  className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-card/70 hover:border-border hover:text-foreground transition-all"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                  </svg>
+                  Sample Paystub
+                </button>
+              </div>
+            </div>
+
+            {/* Trust strip */}
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-forest" />
+                Analyzed in memory
+              </div>
+              <span className="h-3 w-px bg-border/60 hidden sm:inline-block" />
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-forest" />
+                Nothing stored
+              </div>
+              <span className="h-3 w-px bg-border/60 hidden sm:inline-block" />
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+                Live market data via MCP
+              </div>
             </div>
           </div>
+        </section>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+        {/* Below-the-fold: "What you'll see" preview */}
+        <Reveal as="section" className="relative z-10 px-6 sm:px-10 py-20 border-t border-border/40">
+          <div className="mx-auto max-w-5xl">
+            <div className="text-center">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+                — What you&apos;ll see —
+              </span>
+              <h2 className="mt-3 font-serif text-3xl sm:text-4xl font-bold tracking-editorial text-foreground">
+                A report Wall Street wishes you&apos;d never read.
+              </h2>
+            </div>
 
-          {/* Sample links — prominent buttons */}
-          <div className="mt-6 flex flex-col items-center gap-3">
-            <span className="text-xs text-muted-foreground/50 uppercase tracking-widest">or try a sample — no upload needed</span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => loadSample("sample-401k.pdf")}
-                className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-5 py-2.5 text-sm font-medium text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/60 transition-all"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
-                </svg>
-                Sample 401(k)
-              </button>
-              <button
-                onClick={() => loadSample("sample-paystub.pdf")}
-                className="flex items-center gap-2 rounded-xl border border-border/50 bg-card/30 px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-card/60 hover:border-border hover:text-foreground transition-all"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
-                </svg>
-                Sample Paystub
-              </button>
+            <div className="mt-10 grid gap-5 sm:grid-cols-3">
+              {[
+                {
+                  eyebrow: "Score",
+                  big: "B+",
+                  caption: "Your portfolio, graded.",
+                  body: "A 0–100 health score from blended fees, match capture, and diversification.",
+                  tone: "text-gold",
+                },
+                {
+                  eyebrow: "Headline",
+                  big: "$84,500",
+                  caption: "The single most important number.",
+                  body: "What you’ll lose to fees over 30 years if nothing changes.",
+                  tone: "text-oxblood",
+                },
+                {
+                  eyebrow: "Action",
+                  big: "1 thing",
+                  caption: "Concrete. Doable. This week.",
+                  body: "Not vague advice. A specific switch worth a specific dollar amount.",
+                  tone: "text-forest",
+                },
+              ].map((c, i) => (
+                <Reveal key={c.eyebrow} delay={i * 80}>
+                  <div className="relative h-full rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm p-6 hover:border-gold/40 transition-colors">
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60">
+                      {c.eyebrow}
+                    </span>
+                    <p className={`mt-3 font-serif text-5xl font-bold tracking-editorial nums ${c.tone}`}>
+                      {c.big}
+                    </p>
+                    <p className="mt-3 text-sm font-medium text-foreground">
+                      {c.caption}
+                    </p>
+                    <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                      {c.body}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
             </div>
           </div>
+        </Reveal>
 
-          {/* Trust badges */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/30 bg-card/30 px-4 py-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              <span className="text-xs text-muted-foreground">Analyzed in memory</span>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/30 bg-card/30 px-4 py-2">
-              <svg className="h-3.5 w-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-              </svg>
-              <span className="text-xs text-muted-foreground">No account required</span>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/30 bg-card/30 px-4 py-2">
-              <span className="text-xs text-muted-foreground">⚡ Powered by Claude Sonnet 4.6</span>
-            </div>
+        {/* Footer */}
+        <footer className="relative z-10 border-t border-border/40 px-6 sm:px-10 py-6">
+          <div className="mx-auto max-w-5xl flex flex-wrap items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+            <span>Fidelio · Latin <em className="font-serif italic">fidelis</em>, faithful</span>
+            <span>Built at NJIT Claude Builder Club · 04.26.2026</span>
           </div>
-        </div>
+        </footer>
       </main>
     );
   }
@@ -399,19 +558,19 @@ export default function Home() {
       <main className="flex min-h-screen flex-col items-center justify-center px-6 py-24">
         <div className="absolute top-5 right-5"><ThemeToggle /></div>
         <div className="max-w-lg text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-6">
-            <svg className="h-6 w-6 text-rose-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <div className="mx-auto h-12 w-12 rounded-full bg-oxblood/10 flex items-center justify-center mb-6">
+            <svg className="h-6 w-6 text-oxblood" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
           </div>
           {scanned ? (
             <>
-              <h2 className="text-lg font-semibold text-foreground mb-3">We couldn’t read this PDF</h2>
+              <h2 className="font-serif text-2xl font-semibold text-foreground mb-3">We couldn&apos;t read this PDF</h2>
               <p className="text-muted-foreground leading-relaxed">
                 This looks like a scanned or image-based PDF. Fidelio works best with text-based statements — the kind your plan provider emails you or generates in their portal.
               </p>
               <p className="mt-4 text-sm text-muted-foreground/70">
-                Try downloading a fresh statement from your 401(k) provider’s website, or use one of our samples below to see what Fidelio can do.
+                Try downloading a fresh statement from your 401(k) provider&apos;s website, or use one of our samples below to see what Fidelio can do.
               </p>
               <div className="mt-6 flex items-center justify-center gap-3">
                 <Button onClick={() => loadSample("sample-401k.pdf")} variant="outline" size="sm">
@@ -448,22 +607,28 @@ export default function Home() {
 
   // Report screen
   return (
-    <main className="min-h-screen px-6 py-12 max-w-3xl mx-auto">
+    <main className="min-h-screen px-6 py-10 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div>
-          <h1 className="text-2xl font-serif font-semibold text-foreground">
-            Your Report
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Powered by Claude · verified with live market data
-          </p>
-        </div>
+      <div className="flex items-start justify-between mb-3 gap-4">
         <div className="flex items-center gap-3">
+          <svg className="h-6 w-6 text-gold shrink-0" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M12 12L3 7M12 12l9-5M12 12v10" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+          <div>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+              Fidelio Report · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </span>
+            <h1 className="font-serif text-2xl font-bold tracking-editorial text-foreground leading-tight">
+              Your Translation
+            </h1>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           <ThemeToggle />
           <button
             onClick={() => window.print()}
-            className="hidden sm:flex items-center gap-1.5 rounded-lg border border-border/50 bg-card/50 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            className="hidden sm:flex items-center gap-1.5 rounded-md border border-border/60 bg-card/50 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors"
             title="Save as PDF"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -476,27 +641,32 @@ export default function Home() {
           </Button>
         </div>
       </div>
+      <p className="text-sm text-muted-foreground -mt-1">
+        Powered by Claude · verified with live market data
+      </p>
 
       {/* Sticky section nav */}
       <ReportNav />
 
-      {/* Report cards — stacked */}
+      {/* Report cards — stacked, scroll-revealed */}
       <div className="mt-6 space-y-6">
-        <ScoreCard report={state.report} extraction={state.extraction} />
-        <HeadlineCard headline={state.report.headline} />
-        <HoldingsTable holdings={state.report.holdings_review} />
-        <FeeImpactCard feeImpact={state.report.fee_impact} />
+        <Reveal><ScoreCard report={state.report} extraction={state.extraction} /></Reveal>
+        <Reveal delay={50}><HeadlineCard headline={state.report.headline} /></Reveal>
+        <Reveal delay={100}><HoldingsTable holdings={state.report.holdings_review} /></Reveal>
+        <Reveal delay={50}><FeeImpactCard feeImpact={state.report.fee_impact} /></Reveal>
         <div className="grid sm:grid-cols-2 gap-6">
-          <MatchCard matchAnalysis={state.report.match_analysis} />
-          <PaystubCard report={state.report} extraction={state.extraction} />
+          <Reveal><MatchCard matchAnalysis={state.report.match_analysis} /></Reveal>
+          <Reveal delay={80}><PaystubCard report={state.report} extraction={state.extraction} /></Reveal>
         </div>
-        <ActionItemCard actionItems={state.report.action_items} />
-        <AuditLog
-          events={state.events}
-          isOpen={auditOpen}
-          onToggle={() => setAuditOpen(!auditOpen)}
-        />
-        <ChatBox extraction={state.extraction} report={state.report} />
+        <Reveal><ActionItemCard actionItems={state.report.action_items} /></Reveal>
+        <Reveal>
+          <AuditLog
+            events={state.events}
+            isOpen={auditOpen}
+            onToggle={() => setAuditOpen(!auditOpen)}
+          />
+        </Reveal>
+        <Reveal><ChatBox extraction={state.extraction} report={state.report} /></Reveal>
       </div>
 
       <Disclaimer />

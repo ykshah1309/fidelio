@@ -173,10 +173,13 @@ export function ChatBox({ extraction, report }: ChatBoxProps) {
   }
 
   return (
-    <div id="chat" className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-border/50">
-        <h2 className="text-lg font-semibold text-foreground">Ask Fidelio</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+    <div id="chat" className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden" data-print-hide>
+      <div className="px-7 py-5 border-b border-border/50">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+          VIII · Conversation
+        </span>
+        <h2 className="font-serif text-2xl font-bold tracking-editorial text-foreground mt-0.5">Ask Fidelio</h2>
+        <p className="text-sm text-muted-foreground mt-1.5">
           Ask follow-up questions about your document. Your data stays in context.
         </p>
       </div>
@@ -243,16 +246,21 @@ export function ChatBox({ extraction, report }: ChatBoxProps) {
 
       {/* Suggested questions */}
       {!suggestionsUsed && messages.length === 0 && (
-        <div className="px-6 pt-4 pb-2 flex flex-wrap gap-2">
-          {suggestions.map((s, i) => (
-            <button
-              key={i}
-              onClick={() => handleSubmit(s)}
-              className="text-xs rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-muted-foreground hover:border-border hover:text-foreground transition-colors text-left"
-            >
-              {s}
-            </button>
-          ))}
+        <div className="px-7 pt-4 pb-2">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-3">
+            Try asking
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => handleSubmit(s)}
+                className="text-xs rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-muted-foreground hover:border-gold/40 hover:bg-gold/5 hover:text-foreground transition-all text-left max-w-full"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -261,7 +269,7 @@ export function ChatBox({ extraction, report }: ChatBoxProps) {
           e.preventDefault();
           handleSubmit(input);
         }}
-        className="px-6 py-4 flex gap-3"
+        className="px-7 py-4 flex gap-3"
       >
         <Textarea
           ref={textareaRef}

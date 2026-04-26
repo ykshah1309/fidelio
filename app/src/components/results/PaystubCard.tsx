@@ -10,17 +10,17 @@ interface PaystubCardProps {
 }
 
 const DEDUCTION_COLORS: Record<string, string> = {
-  federal_tax: "bg-rose-500",
-  state_tax: "bg-orange-500",
-  fica: "bg-amber-500",
-  medicare: "bg-yellow-500",
-  retirement: "bg-emerald-500",
-  health_insurance: "bg-sky-500",
-  dental: "bg-blue-500",
-  vision: "bg-violet-500",
-  hsa: "bg-teal-500",
-  fsa: "bg-cyan-500",
-  other: "bg-zinc-500",
+  federal_tax: "bg-oxblood",
+  state_tax: "bg-oxblood/70",
+  fica: "bg-gold",
+  medicare: "bg-gold-soft",
+  retirement: "bg-forest",
+  health_insurance: "bg-forest/60",
+  dental: "bg-forest/40",
+  vision: "bg-gold/50",
+  hsa: "bg-forest/80",
+  fsa: "bg-forest/50",
+  other: "bg-muted-foreground",
 };
 
 const DEDUCTION_LABELS: Record<string, string> = {
@@ -60,10 +60,13 @@ export function PaystubCard({ report, extraction }: PaystubCardProps) {
   const groupedEntries = Object.entries(grouped).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div id="paystub" className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-border/50">
-        <h2 className="text-lg font-semibold text-foreground">Paystub Breakdown</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+    <div id="paystub" className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden h-full">
+      <div className="px-7 py-5 border-b border-border/50">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70">
+          VI · Paystub Anatomy
+        </span>
+        <h2 className="font-serif text-2xl font-bold tracking-editorial text-foreground mt-0.5">Paystub Breakdown</h2>
+        <p className="text-sm text-muted-foreground mt-1.5">
           Where your{" "}
           <FinanceTerm term="gross pay">gross pay</FinanceTerm>
           {" "}goes before it hits your bank account.
@@ -72,24 +75,24 @@ export function PaystubCard({ report, extraction }: PaystubCardProps) {
 
       {/* Stacked deduction bar */}
       {gross != null && deductions.length > 0 && (
-        <div className="px-6 py-5 border-b border-border/30">
+        <div className="px-7 py-5 border-b border-border/30">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">
               <FinanceTerm term="gross pay">Gross</FinanceTerm>:{" "}
-              <span className="text-foreground font-semibold">{formatUSD(gross)}</span>
+              <span className="text-foreground font-semibold nums">{formatUSD(gross)}</span>
             </span>
             <span className="text-sm text-muted-foreground">
               <FinanceTerm term="net pay">Take-home</FinanceTerm>:{" "}
-              <span className="text-emerald-400 font-semibold">{formatUSD(net)}</span>
+              <span className="text-forest font-semibold nums">{formatUSD(net)}</span>
             </span>
           </div>
 
           {/* Stacked bar */}
-          <div className="h-4 rounded-full overflow-hidden flex bg-white/5">
+          <div className="h-4 rounded-full overflow-hidden flex bg-foreground/5">
             {/* Net pay segment */}
             {net != null && gross > 0 && (
               <div
-                className="bg-emerald-500/70 h-full"
+                className="bg-forest h-full"
                 style={{ width: `${Math.max(0, (net / gross) * 100)}%` }}
                 title={`Take-home: ${formatUSD(net)}`}
               />
@@ -109,7 +112,7 @@ export function PaystubCard({ report, extraction }: PaystubCardProps) {
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
             {net != null && (
               <div className="flex items-center gap-1.5 text-xs">
-                <div className="h-2 w-2 rounded-full bg-emerald-500/70" />
+                <div className="h-2 w-2 rounded-full bg-forest" />
                 <span className="text-muted-foreground">
                   Take-home{" "}
                   <span className="text-foreground font-medium">
@@ -141,10 +144,10 @@ export function PaystubCard({ report, extraction }: PaystubCardProps) {
 
       {/* Withholding check + notes */}
       {notes && (
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-7 py-5 space-y-4">
           {/* Withholding check */}
           <div>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+            <p className="font-mono text-[10px] font-medium text-muted-foreground/80 uppercase tracking-widest mb-1.5">
               <FinanceTerm term="withholding">Withholding</FinanceTerm> Check
             </p>
             <p className="text-sm text-foreground/90 leading-relaxed">
@@ -155,7 +158,7 @@ export function PaystubCard({ report, extraction }: PaystubCardProps) {
           {/* Retirement note */}
           {notes.retirement_note && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+              <p className="font-mono text-[10px] font-medium text-muted-foreground/80 uppercase tracking-widest mb-1.5">
                 Retirement Contribution
               </p>
               <p className="text-sm text-foreground/90 leading-relaxed">
@@ -167,14 +170,14 @@ export function PaystubCard({ report, extraction }: PaystubCardProps) {
           {/* Flags */}
           {notes.flags.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+              <p className="font-mono text-[10px] font-medium text-muted-foreground/80 uppercase tracking-widest mb-2">
                 Flags
               </p>
               <ul className="space-y-2">
                 {notes.flags.map((flag, i) => (
                   <li key={i} className="flex items-start gap-2.5">
                     <svg
-                      className="mt-0.5 h-4 w-4 shrink-0 text-amber-400"
+                      className="mt-0.5 h-4 w-4 shrink-0 text-gold"
                       fill="none"
                       viewBox="0 0 24 24"
                       strokeWidth={2}
@@ -197,16 +200,16 @@ export function PaystubCard({ report, extraction }: PaystubCardProps) {
 
       {/* YTD summary if available */}
       {paystub?.ytd_gross != null && (
-        <div className="px-6 py-4 border-t border-border/30 bg-muted/20">
-          <div className="flex gap-6 text-sm">
+        <div className="px-7 py-4 border-t border-border/30 bg-muted/20">
+          <div className="flex flex-wrap gap-6 text-sm">
             <div>
               <span className="text-muted-foreground"><FinanceTerm term="ytd">YTD</FinanceTerm> Gross: </span>
-              <span className="text-foreground font-medium">{formatUSD(paystub.ytd_gross)}</span>
+              <span className="text-foreground font-medium nums">{formatUSD(paystub.ytd_gross)}</span>
             </div>
             {paystub.ytd_net != null && (
               <div>
                 <span className="text-muted-foreground">YTD Take-home: </span>
-                <span className="text-foreground font-medium">{formatUSD(paystub.ytd_net)}</span>
+                <span className="text-foreground font-medium nums">{formatUSD(paystub.ytd_net)}</span>
               </div>
             )}
           </div>

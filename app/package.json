@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "smoketest": "tsx scripts/mcp-smoketest.ts"
+    "smoketest": "tsx scripts/mcp-smoketest.ts",
+    "samples": "node scripts/generate-samples.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",

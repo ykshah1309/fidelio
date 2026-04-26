@@ -48,16 +48,97 @@ export function messageText(response: {
  * Extract the JSON payload from within <extraction>...</extraction> or
  * <report>...</report> tags. Returns null if the tag is missing or the JSON
  * is malformed — never throws.
+ *
+ * Robust to common Claude quirks:
+ *   - JSON wrapped in a ```json ... ``` fence inside the tag
+ *   - Leading/trailing prose inside the tag ("Here's the JSON: { ... }")
+ *   - Missing tags entirely (last-resort scan for a JSON object containing
+ *     a tag-specific anchor field).
  */
 export function extractTaggedJson<T = unknown>(
   text: string,
   tag: "extraction" | "report",
 ): T | null {
-  const match = text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i"));
-  if (!match) return null;
+  // Pass 1 — properly tagged
+  const tagged = text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i"));
+  if (tagged) {
+    const cleaned = stripFencesAndProse(tagged[1]);
+    const parsed = tryParseJson(cleaned);
+    if (parsed !== null) return parsed as T;
+    // If the tagged JSON is malformed, fall through to anchor-based recovery.
+  }
+
+  // Pass 2 — last-resort: find the first JSON object whose top-level keys
+  // include a tag-specific anchor. This rescues responses where Claude
+  // forgot the tags but still emitted valid JSON.
+  const anchor = tag === "extraction" ? "document_type" : "headline";
+  const anchored = findJsonObjectContainingKey(text, anchor);
+  if (anchored !== null) return anchored as T;
+
+  return null;
+}
+
+function stripFencesAndProse(s: string): string {
+  let out = s.trim();
+  // ```json ... ```  or ``` ... ```
+  const fenced = out.match(/```(?:json|JSON)?\s*([\s\S]*?)\s*```/);
+  if (fenced) out = fenced[1].trim();
+  // If there's leading prose, trim to the first { and trailing } block.
+  const firstBrace = out.indexOf("{");
+  const lastBrace = out.lastIndexOf("}");
+  if (firstBrace > 0 && lastBrace > firstBrace) {
+    out = out.slice(firstBrace, lastBrace + 1);
+  }
+  return out;
+}
+
+function tryParseJson(s: string): unknown | null {
   try {
-    return JSON.parse(match[1].trim()) as T;
+    return JSON.parse(s);
   } catch {
     return null;
   }
+}
+
+/** Scan text for a top-level JSON object whose keys include `key`. */
+function findJsonObjectContainingKey(text: string, key: string): unknown | null {
+  // Find every `{` and try to match braces, then test if the parsed object
+  // has the anchor key. Cheap enough for our payload sizes.
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== "{") continue;
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let j = i; j < text.length; j++) {
+      const ch = text[j];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') inString = !inString;
+      if (inString) continue;
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          const candidate = text.slice(i, j + 1);
+          const parsed = tryParseJson(candidate);
+          if (
+            parsed &&
+            typeof parsed === "object" &&
+            !Array.isArray(parsed) &&
+            key in (parsed as Record<string, unknown>)
+          ) {
+            return parsed;
+          }
+          break; // try next `{`
+        }
+      }
+    }
+  }
+  return null;
 }

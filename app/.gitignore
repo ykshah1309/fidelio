@@ -45,6 +45,9 @@ next-env.d.ts
 /tmp-uploads/
 /tmp-reports/
 
-# sample PDFs that may contain PII — place these in public/samples/ but DO NOT commit them
+# sample PDFs that may contain PII — block any *.pdf, but whitelist the
+# synthetic samples produced by `npm run samples` (fictional data, safe).
 public/samples/*.pdf
 !public/samples/.gitkeep
+!public/samples/sample-401k.pdf
+!public/samples/sample-paystub.pdf

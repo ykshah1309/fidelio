@@ -66,11 +66,11 @@ export function ReportNav() {
   const activeItem = visibleItems.find((n) => n.id === active) ?? visibleItems[0];
 
   return (
-    <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border/40 -mx-6 px-6 mb-8">
+    <div className="sticky top-0 z-30 bg-background/85 backdrop-blur-md border-b border-border/40 -mx-6 px-6 mb-8" data-print-hide>
       {/* Active section breadcrumb */}
       <div className="flex items-center gap-2 pt-2 pb-0.5">
-        <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest">Viewing</span>
-        <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">{activeItem.label}</span>
+        <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">Viewing</span>
+        <span className="font-mono text-[10px] font-semibold text-gold uppercase tracking-widest">— {activeItem.label}</span>
       </div>
       <nav className="overflow-x-auto scrollbar-none">
         <ul className="flex gap-1 py-1.5 min-w-max">
@@ -79,10 +79,10 @@ export function ReportNav() {
               <button
                 onClick={() => scrollTo(item.id)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap",
+                  "rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest transition-colors whitespace-nowrap",
                   active === item.id
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]",
+                    ? "bg-gold/10 text-gold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]",
                 )}
               >
                 {item.label}
